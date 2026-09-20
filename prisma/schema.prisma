@@ -1,7 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Sistema de Ordens de Serviço — Terrinha e filho funilaria e pintura
+// Atividade de extensão universitária
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +8,105 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum StatusServico {
+  ORCAMENTO
+  APROVADO
+  EM_EXECUCAO
+  PRONTO
+  ENTREGUE
+  RECUSADO
+  CANCELADO
+}
+
+enum StatusPagamento {
+  NAO_PAGO
+  SINAL_PAGO
+  PAGO
+}
+
+enum PapelUsuario {
+  ADMIN
+  OPERADOR
+}
+
+model Usuario {
+  id        String       @id @default(cuid())
+  nome      String
+  email     String       @unique
+  senhaHash String
+  papel     PapelUsuario @default(OPERADOR)
+  criadoEm  DateTime     @default(now())
+
+  historicos HistoricoStatus[]
+}
+
+model Cliente {
+  id           String   @id @default(cuid())
+  nome         String
+  telefone     String
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  veiculos Veiculo[]
+
+  @@index([nome])
+}
+
+model Veiculo {
+  id           String   @id @default(cuid())
+  placa        String   @unique
+  modelo       String
+  cor          String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  ordens OrdemServico[]
+
+  @@index([clienteId])
+}
+
+model OrdemServico {
+  id               String          @id @default(cuid())
+  numero           Int             @unique @default(autoincrement())
+  descricaoServico String
+  valorOrcamento   Decimal?        @db.Decimal(10, 2)
+  valorSinal       Decimal?        @db.Decimal(10, 2)
+  statusServico    StatusServico   @default(ORCAMENTO)
+  statusPagamento  StatusPagamento @default(NAO_PAGO)
+  dataEntrada      DateTime        @default(now())
+  previsaoEntrega  DateTime?
+  dataEntrega      DateTime?
+  observacoes      String?
+  criadoEm         DateTime        @default(now())
+  atualizadoEm     DateTime        @updatedAt
+
+  veiculoId String
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Restrict)
+
+  historicos HistoricoStatus[]
+
+  @@index([statusServico])
+  @@index([veiculoId])
+  @@index([dataEntrada])
+}
+
+model HistoricoStatus {
+  id             String         @id @default(cuid())
+  statusAnterior StatusServico?
+  statusNovo     StatusServico
+  observacao     String?
+  criadoEm       DateTime       @default(now())
+
+  ordemServicoId String
+  ordemServico   OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([ordemServicoId, criadoEm])
 }
