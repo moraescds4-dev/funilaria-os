@@ -32,13 +32,17 @@ enum PapelUsuario {
 }
 
 model Usuario {
-  id        String       @id @default(cuid())
-  nome      String
-  email     String       @unique
-  senhaHash String
-  papel     PapelUsuario @default(OPERADOR)
-  criadoEm  DateTime     @default(now())
+  id              String       @id @default(cuid())
+  nome            String
+  email           String       @unique
+  emailVerificado Boolean      @default(false)
+  imagem          String?
+  papel           PapelUsuario @default(OPERADOR)
+  criadoEm        DateTime     @default(now())
+  atualizadoEm    DateTime     @default(now()) @updatedAt
 
+  sessoes    Sessao[]
+  contas     Conta[]
   historicos HistoricoStatus[]
 }
 
@@ -109,4 +113,55 @@ model HistoricoStatus {
   usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
 
   @@index([ordemServicoId, criadoEm])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tabelas de autenticação (Better Auth)
+// Os campos seguem os nomes em inglês esperados pela biblioteca.
+// ─────────────────────────────────────────────────────────────
+
+model Sessao {
+  id        String   @id
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId  String
+  usuario Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Conta {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  password              String?
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId  String
+  usuario Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verificacao {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
 }
