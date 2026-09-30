@@ -1,0 +1,52 @@
+name: CI
+
+# Quando rodar: a cada push na main e a cada Pull Request para a main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# O CI só precisa ler o código; nada além disso
+permissions:
+  contents: read
+
+# Se chegar um push novo na mesma branch, cancela a execução antiga
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Lint, typecheck e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Valores fictícios: o build exige que as variáveis existam,
+    # mas não conecta no banco. Nenhum segredo real fica aqui.
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      BETTER_AUTH_SECRET: segredo-ficticio-usado-apenas-no-build-do-ci
+      BETTER_AUTH_URL: http://localhost:3000
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v5
+
+      - name: Instalar o Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
