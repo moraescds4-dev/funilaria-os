@@ -1,0 +1,14 @@
+# Fins de linha: LF no repositório e na pasta de trabalho,
+# em qualquer sistema operacional (Windows, Linux do CI, macOS).
+* text=auto eol=lf
+
+# Arquivos binários: o Git nunca deve alterar o conteúdo.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
