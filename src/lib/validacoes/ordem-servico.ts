@@ -63,22 +63,75 @@ export function valorBrParaDecimal(texto: string): string {
   return `${inteiro}.${centavos.padEnd(2, "0")}`;
 }
 
+// ── Telefone ────────────────────────────────────────────────
+
+/**
+ * DDD + número, guardado só com dígitos.
+ * Usado no proprietário e no responsável pela OS.
+ */
+const telefoneSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
+  z
+    .string({ error: "Informe o telefone." })
+    .regex(/^[1-9]{2}9?\d{8}$/, "Telefone inválido. Informe DDD e número."),
+);
+
+// ── Responsável pela OS ─────────────────────────────────────
+
+/**
+ * Se o proprietário é o responsável, os campos do responsável são
+ * descartados antes da validação, mesmo que tenham chegado preenchidos.
+ */
+function descartarResponsavelSeProprietario(dados: unknown): unknown {
+  if (
+    typeof dados === "object" &&
+    dados !== null &&
+    (dados as Record<string, unknown>).responsavelEhProprietario === "sim"
+  ) {
+    return { ...dados, responsavelNome: undefined, responsavelTelefone: undefined };
+  }
+  return dados;
+}
+
 // ── Schema da nova ordem de serviço ─────────────────────────
 
-export const novaOrdemServicoSchema = z.object({
-  // Cliente
+const camposNovaOrdemServico = z.object({
+  // Proprietário do veículo
   nomeCliente: z
-    .string({ error: "Informe o nome do cliente." })
+    .string({ error: "Informe o nome do proprietário." })
     .trim()
     .min(2, "O nome deve ter pelo menos 2 letras.")
     .max(100, "O nome deve ter no máximo 100 caracteres."),
 
-  telefone: z.preprocess(
-    (v) => (typeof v === "string" ? v.replace(/\D/g, "") : v),
+  telefone: telefoneSchema,
+
+  // Placa já cadastrada: manter o proprietário ou trocar.
+  // Em placa nova é ignorado. Se não vier, vale "manter".
+  acaoProprietario: z.preprocess(
+    vazioParaUndefined,
     z
-      .string({ error: "Informe o telefone." })
-      .regex(/^[1-9]{2}9?\d{8}$/, "Telefone inválido. Informe DDD e número."),
+      .enum(["manter", "trocar"], { error: "Opção de proprietário inválida." })
+      .default("manter"),
   ),
+
+  // Responsável pela OS
+  responsavelEhProprietario: z
+    .enum(["sim", "nao"], {
+      error: "Informe se o proprietário é o responsável pela OS.",
+    })
+    .transform((v) => v === "sim"),
+
+  responsavelNome: z.preprocess(
+    vazioParaUndefined,
+    z
+      .string()
+      .trim()
+      .min(2, "O nome deve ter pelo menos 2 letras.")
+      .max(100, "O nome deve ter no máximo 100 caracteres.")
+      .optional(),
+  ),
+
+  responsavelTelefone: z.preprocess(vazioParaUndefined, telefoneSchema.optional()),
 
   // Veículo
   placa: z.preprocess(
@@ -153,6 +206,32 @@ export const novaOrdemServicoSchema = z.object({
       .optional(),
   ),
 });
+
+/**
+ * Schema completo: descarta o responsável quando é o próprio
+ * proprietário e exige nome e telefone quando é outra pessoa.
+ */
+export const novaOrdemServicoSchema = z.preprocess(
+  descartarResponsavelSeProprietario,
+  camposNovaOrdemServico.superRefine((dados, ctx) => {
+    if (dados.responsavelEhProprietario) return;
+
+    if (!dados.responsavelNome) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["responsavelNome"],
+        message: "Informe o nome do responsável.",
+      });
+    }
+    if (!dados.responsavelTelefone) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["responsavelTelefone"],
+        message: "Informe o telefone do responsável.",
+      });
+    }
+  }),
+);
 
 /** Dados já validados e normalizados, prontos para gravar. */
 export type NovaOrdemServico = z.output<typeof novaOrdemServicoSchema>;

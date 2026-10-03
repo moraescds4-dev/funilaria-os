@@ -9,6 +9,7 @@ import { novaOrdemServicoSchema } from "../src/lib/validacoes/ordem-servico";
 const base = {
   nomeCliente: "  Maria da Silva  ",
   telefone: "(11) 98765-4321",
+   responsavelEhProprietario: "sim",
   placa: "abc-1234",
   modelo: "Gol",
   cor: "",
@@ -35,6 +36,14 @@ const casos: [string, Record<string, unknown>, boolean][] = [
   ["Data futura", { previsaoEntrega: "2030-03-15" }, true],
   ["Tentar forçar status", { statusServico: "ENTREGUE" }, true],
   ["Nome faltando", { nomeCliente: undefined }, false],
+    // Fase 8.2: proprietário e responsável pela OS
+  ["Sem resposta sobre o responsável", { responsavelEhProprietario: undefined }, false],
+  ["Responsável é outra pessoa, sem dados", { responsavelEhProprietario: "nao" }, false],
+  ["Responsável é outra pessoa, completo", { responsavelEhProprietario: "nao", responsavelNome: " João Souza ", responsavelTelefone: "(11) 99999-8888" }, true],
+  ["Responsável com telefone inválido", { responsavelEhProprietario: "nao", responsavelNome: "João Souza", responsavelTelefone: "123" }, false],
+  ["Proprietário responsável, campos extras descartados", { responsavelNome: "Lixo", responsavelTelefone: "123" }, true],
+  ["Trocar proprietário", { acaoProprietario: "trocar" }, true],
+  ["Ação de proprietário inválida", { acaoProprietario: "apagar" }, false],
 ];
 
 let falhas = 0;
