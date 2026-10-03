@@ -53,7 +53,8 @@ model Cliente {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  veiculos Veiculo[]
+  veiculos Veiculo[]      // veículos de que é o proprietário atual
+  ordens   OrdemServico[] // OS em que era o proprietário na data da entrada
 
   @@index([nome])
 }
@@ -89,13 +90,24 @@ model OrdemServico {
   criadoEm         DateTime        @default(now())
   atualizadoEm     DateTime        @updatedAt
 
+  // Responsável por esta OS, quando não é o proprietário.
+  // Vazio = o próprio proprietário é o responsável.
+  responsavelNome     String?
+  responsavelTelefone String?
+
   veiculoId String
   veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Restrict)
+
+  // Proprietário do veículo na data da entrada. Não muda se o
+  // veículo trocar de dono depois: preserva o histórico.
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
 
   historicos HistoricoStatus[]
 
   @@index([statusServico])
   @@index([veiculoId])
+  @@index([clienteId])
   @@index([dataEntrada])
 }
 
