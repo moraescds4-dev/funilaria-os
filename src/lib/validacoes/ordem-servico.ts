@@ -39,7 +39,7 @@ function dataExiste(texto: string): boolean {
 // ── Placa ───────────────────────────────────────────────────
 
 /** Antiga (ABC1234) ou Mercosul (ABC1D23), já normalizada. */
-const PADRAO_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
+export const PADRAO_PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
 
 /** "abc-1234" → "ABC1234". Também será usada na busca por placa. */
 export function normalizarPlaca(placa: string): string {

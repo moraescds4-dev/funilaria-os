@@ -10,6 +10,7 @@ import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { novaOrdemServicoSchema } from "../src/lib/validacoes/ordem-servico";
 import { criarOrdemServico } from "../src/server/ordens-servico";
+import { buscarVeiculoPorPlaca } from "../src/server/veiculos";
 
 const PLACA = "TST1A23";
 const NOMES_FICTICIOS = ["Dono Antigo", "Dono Novo"];
@@ -138,6 +139,27 @@ async function main() {
       o3.responsavelTelefone === "11944444444" &&
       o1.responsavelNome === null,
   );
+
+  
+  // 4) Busca prévia por placa (Fase 8.3)
+  console.log("\n4) Busca por placa");
+  const achado = await buscarVeiculoPorPlaca("tst 1a23");
+  conferir(
+    "encontra a placa digitada com espaço e minúsculas",
+    achado?.placa === PLACA,
+  );
+  conferir(
+    "devolve o proprietário atual e os dados do veículo",
+    achado?.proprietario.nome === "Dono Novo" &&
+      achado.proprietario.telefone === "11933333333" &&
+      achado.cor === "Prata",
+  );
+  conferir(
+    "não devolve ids internos",
+    achado !== null && !("id" in achado) && !("id" in achado.proprietario),
+  );
+  conferir("placa não cadastrada devolve null", (await buscarVeiculoPorPlaca("ZZZ9Z99")) === null);
+  conferir("placa inválida devolve null", (await buscarVeiculoPorPlaca("X")) === null);
 }
 
 main()
