@@ -44,6 +44,7 @@ model Usuario {
   sessoes    Sessao[]
   contas     Conta[]
   historicos HistoricoStatus[]
+  historicosPagamento HistoricoPagamento[]
 }
 
 model Cliente {
@@ -104,6 +105,7 @@ model OrdemServico {
   cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
 
   historicos HistoricoStatus[]
+  historicosPagamento HistoricoPagamento[]
 
   @@index([statusServico])
   @@index([veiculoId])
@@ -116,7 +118,30 @@ model HistoricoStatus {
   statusAnterior StatusServico?
   statusNovo     StatusServico
   observacao     String?
+  // true = esta linha desfaz a mudança anterior (botão "Corrigir").
+  // A linha original nunca é apagada: o histórico é auditável.
+  correcao       Boolean        @default(false)
   criadoEm       DateTime       @default(now())
+
+
+  ordemServicoId String
+  ordemServico   OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([ordemServicoId, criadoEm])
+}
+
+model HistoricoPagamento {
+  id             String          @id @default(cuid())
+  statusAnterior StatusPagamento
+  statusNovo     StatusPagamento
+  // Valor do sinal informado nesta mudança (só quando vai para SINAL_PAGO).
+  valorSinal     Decimal?        @db.Decimal(10, 2)
+  // true = esta linha desfaz a mudança anterior (botão "Corrigir").
+  correcao       Boolean         @default(false)
+  criadoEm       DateTime        @default(now())
 
   ordemServicoId String
   ordemServico   OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
