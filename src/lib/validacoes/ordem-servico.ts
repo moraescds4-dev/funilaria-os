@@ -63,6 +63,35 @@ export function valorBrParaDecimal(texto: string): string {
   return `${inteiro}.${centavos.padEnd(2, "0")}`;
 }
 
+/** Tira "R$" e espaços; campo vazio vira undefined. */
+function limparValorEmReais(v: unknown): unknown {
+  const valor = vazioParaUndefined(v);
+  return typeof valor === "string" ? valor.replace(/R\$|\s/g, "") : valor;
+}
+
+/**
+ * Valor em reais no formato brasileiro, já limpo.
+ * Sai como texto decimal ("1500.00") para o Decimal do Prisma.
+ */
+const valorEmReaisSchema = z
+  .string({ error: "Informe o valor." })
+  .regex(PADRAO_VALOR_BR, "Valor inválido. Use vírgula nos centavos, como em 1.500,00.")
+  .transform(valorBrParaDecimal)
+  .refine((v) => /[1-9]/.test(v), "O valor deve ser maior que zero.")
+  .refine(
+    (v) => v.split(".")[0].replace(/^0+/, "").length <= 8,
+    "O valor máximo é 99.999.999,99.",
+  );
+
+/** Valor em reais obrigatório (ex.: sinal, na Fase 9.4). */
+export const valorEmReaisObrigatorio = z.preprocess(limparValorEmReais, valorEmReaisSchema);
+
+/** Valor em reais opcional (ex.: orçamento no cadastro). */
+export const valorEmReaisOpcional = z.preprocess(
+  limparValorEmReais,
+  valorEmReaisSchema.optional(),
+);
+
 // ── Telefone ────────────────────────────────────────────────
 
 /**
@@ -163,25 +192,8 @@ const camposNovaOrdemServico = z.object({
     .min(3, "Descreva o serviço com pelo menos 3 caracteres.")
     .max(2000, "A descrição deve ter no máximo 2.000 caracteres."),
 
-  valorOrcamento: z.preprocess(
-    (v) => {
-      const valor = vazioParaUndefined(v);
-      return typeof valor === "string" ? valor.replace(/R\$|\s/g, "") : valor;
-    },
-    z
-      .string()
-      .regex(
-        PADRAO_VALOR_BR,
-        "Valor inválido. Use vírgula nos centavos, como em 1.500,00.",
-      )
-      .transform(valorBrParaDecimal)
-      .refine((v) => /[1-9]/.test(v), "O valor deve ser maior que zero.")
-      .refine(
-        (v) => v.split(".")[0].replace(/^0+/, "").length <= 8,
-        "O valor máximo é 99.999.999,99.",
-      )
-      .optional(),
-  ),
+  valorOrcamento: valorEmReaisOpcional,
+
 
   previsaoEntrega: z.preprocess(
     vazioParaUndefined,

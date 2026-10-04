@@ -265,7 +265,7 @@ export function FormularioNovaOrdem({ placa, veiculo, telefoneProprietario }: Pr
             name="previsaoEntrega"
             type="date"
             defaultValue={v.previsaoEntrega ?? ""}
-            className={classeCampo}
+            className={`${classeCampo} w-full`}
           />
         </Campo>
         <Campo id="observacoes" rotulo="Observações (opcional)" erros={e.observacoes}>
