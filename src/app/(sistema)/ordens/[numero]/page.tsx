@@ -5,6 +5,7 @@ import { emReais, formatarData, formatarDataHora, formatarTelefone } from "@/lib
 import { exigirSessao } from "@/lib/sessao";
 import { obterDetalheOrdem, type EventoLinhaDoTempo } from "@/server/detalhe-ordem";
 import { AcoesDaOrdem } from "../../acoes-da-ordem";
+import { destinatario, linkLigacao, linkWhatsApp, mensagemPronta, type DadosContato, } from "@/lib/contato";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,14 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
     </div>
   );
 }
+/** Telefone que liga com um toque no celular. */
+function Telefone({ numero }: { numero: string }) {
+  return (
+    <a href={linkLigacao(numero)} className="underline decoration-gray-400 underline-offset-2">
+      {formatarTelefone(numero)}
+    </a>
+  );
+}
 
 export default async function PaginaDetalheOrdem(props: PageProps<"/ordens/[numero]">) {
   await exigirSessao();
@@ -62,6 +71,20 @@ export default async function PaginaDetalheOrdem(props: PageProps<"/ordens/[nume
 
   // Mais recente em cima.
   const eventos = [...os.linhaDoTempo].reverse();
+
+  // Contato (RF12): para quem vai a mensagem e qual texto usar nesta etapa.
+  const dadosContato: DadosContato = {
+    statusServico: os.statusServico,
+    statusPagamento: os.statusPagamento,
+    placa: os.veiculo.placa,
+    modelo: os.veiculo.modelo,
+    valorOrcamento: os.valorOrcamento,
+    saldo: os.saldo,
+    proprietario: os.proprietario,
+    responsavel: os.responsavel,
+  };
+  const para = destinatario(dadosContato);
+  const mensagem = mensagemPronta(dadosContato);
 
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -104,18 +127,45 @@ export default async function PaginaDetalheOrdem(props: PageProps<"/ordens/[nume
           }}
         />
       </Bloco>
+      
+      {/* ── Contato (RF12) ── */}
+      <Bloco titulo="Contato">
+        <p className="text-sm text-gray-700">
+          Para: <span className="font-medium text-gray-900">{para.nome}</span> ({para.papel}) ·{" "}
+          {formatarTelefone(para.telefone)}
+        </p>
+        {mensagem && (
+          <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{mensagem.texto}</p>
+        )}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <a
+            href={linkWhatsApp(para.telefone, mensagem?.texto)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 rounded-lg bg-green-700 px-3 py-2.5 text-center text-sm font-semibold text-white"
+          >
+            {mensagem ? `WhatsApp: ${mensagem.rotulo}` : "Abrir conversa no WhatsApp"}
+          </a>
+          <a
+            href={linkLigacao(para.telefone)}
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-center text-sm font-medium text-gray-800"
+          >
+            Ligar
+          </a>
+        </div>
+      </Bloco>
 
       {/* ── Pessoas ── */}
       <Bloco titulo="Proprietário">
         <Linha rotulo="Nome" valor={os.proprietario.nome} />
-        <Linha rotulo="Telefone" valor={formatarTelefone(os.proprietario.telefone)} />
+        <Linha rotulo="Telefone" valor={<Telefone numero={os.proprietario.telefone} />} />
       </Bloco>
 
       <Bloco titulo="Responsável pela OS">
         {os.responsavel ? (
           <>
             <Linha rotulo="Nome" valor={os.responsavel.nome} />
-            <Linha rotulo="Telefone" valor={formatarTelefone(os.responsavel.telefone)} />
+            <Linha rotulo="Telefone" valor={<Telefone numero={os.responsavel.telefone} />} />
           </>
         ) : (
           <p className="text-sm text-gray-700">O próprio proprietário.</p>
