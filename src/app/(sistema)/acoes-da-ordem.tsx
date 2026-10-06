@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useState } from "react";
 import type { StatusServico } from "@/generated/prisma/enums";
-import { proximaEtapa, ROTULO_SERVICO } from "@/lib/fluxo-status";
+import { aceitaPagamentoNovo, proximaEtapa, ROTULO_SERVICO } from "@/lib/fluxo-status";
 import type { CartaoOS } from "@/server/quadro";
 import {
   corrigirPagamentoAction,
@@ -197,6 +197,9 @@ function FormularioSinal({ os }: { os: DadosAcoes }) {
 export function AcoesDaOrdem({ os }: { os: DadosAcoes }) {
   const proxima = proximaEtapa(os.statusServico);
 
+    // OS recusada ou cancelada: só correções, nada de pagamento novo (06/10).
+  const podePagar = aceitaPagamentoNovo(os.statusServico);
+
   // Encerrar a OS: recusar (só no orçamento) ou cancelar (aprovado ou em execução).
   const encerrar: { status: StatusServico; rotulo: string } | null =
     os.statusServico === "ORCAMENTO"
@@ -241,7 +244,7 @@ export function AcoesDaOrdem({ os }: { os: DadosAcoes }) {
           )}
 
           {/* ── Pagamento ── */}
-          {os.statusPagamento === "NAO_PAGO" && (
+          {podePagar && os.statusPagamento === "NAO_PAGO" && (
             <>
               <FormularioSinal os={os} />
               <BotaoAcao
@@ -254,7 +257,7 @@ export function AcoesDaOrdem({ os }: { os: DadosAcoes }) {
               />
             </>
           )}
-          {os.statusPagamento === "SINAL_PAGO" && (
+          {podePagar && os.statusPagamento === "SINAL_PAGO" && (
             <BotaoAcao
               acao={registrarPagamentoAction}
               ordemServicoId={os.id}

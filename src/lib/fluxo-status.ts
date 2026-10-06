@@ -9,9 +9,10 @@ import type { StatusPagamento, StatusServico } from "@/generated/prisma/enums";
  *
  * Não acessa o banco: pode ser importado no servidor e no navegador.
  *
- * Serviço e pagamento são independentes (RN02 e RN03): nenhuma regra
- * deste arquivo liga um ao outro. Uma OS pode ser ENTREGUE e NAO_PAGO.
- */
+ * Serviço e pagamento são independentes (RN02 e RN03): uma OS pode ser
+ * ENTREGUE e NAO_PAGO. Única exceção, no fim do arquivo: OS recusada ou
+ * cancelada não aceita pagamento novo (decisão de 06/10/2026).
+/
 
 // ── Status do serviço ───────────────────────────────────────
 
@@ -87,3 +88,17 @@ export const ROTULO_PAGAMENTO: Record<StatusPagamento, string> = {
   SINAL_PAGO: "Sinal pago",
   PAGO: "Pago",
 };
+
+
+// ── Exceção à independência (decisão de 06/10/2026) ─────────
+
+/**
+ * OS recusada ou cancelada não aceita pagamento NOVO (sinal, integral
+ * ou quitação). Corrigir o pagamento continua permitido, para desfazer
+ * um sinal registrado antes do cancelamento.
+ */
+export const SERVICO_SEM_PAGAMENTO_NOVO: readonly StatusServico[] = ["RECUSADO", "CANCELADO"];
+
+export function aceitaPagamentoNovo(statusServico: StatusServico): boolean {
+  return !SERVICO_SEM_PAGAMENTO_NOVO.includes(statusServico);
+}

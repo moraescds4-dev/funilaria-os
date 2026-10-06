@@ -1,23 +1,32 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
-import type { StatusPagamento } from "@/generated/prisma/enums";
-import { podeMudarPagamento, ROTULO_PAGAMENTO } from "@/lib/fluxo-status";
+import type { StatusPagamento, StatusServico } from "@/generated/prisma/enums";
+import { aceitaPagamentoNovo, podeMudarPagamento, ROTULO_PAGAMENTO, ROTULO_SERVICO, SERVICO_SEM_PAGAMENTO_NOVO, } from "@/lib/fluxo-status";
 import { ErroDeRegra } from "@/server/erros";
 
 /*
  * Regras da situação de pagamento (Fase 9.3).
  *
- * Independentes do status do serviço (RN02 e RN03): nenhuma função
- * deste arquivo olha para o statusServico. Uma OS pode estar
- * ENTREGUE e NAO_PAGO.
+ * Independentes do status do serviço (RN02 e RN03): uma OS pode estar
+ * ENTREGUE e NAO_PAGO. Exceção (06/10/2026): OS recusada ou cancelada
+ * não aceita pagamento novo. A correção do pagamento continua permitida.
  *
  * Os valores chegam como texto decimal já validado pelo Zod
  * ("600.00"), como o valorOrcamento do cadastro, e viram Decimal
  * para as contas: nunca passam por number, para não perder centavos.
  *
  * Quem chama é responsável por exigir a sessão (exigirSessao).
- */
+/
 
+/** Exceção de 06/10: OS recusada ou cancelada não recebe pagamento novo. */
+function exigirServicoQueAceitaPagamento(statusServico: StatusServico) {
+  if (!aceitaPagamentoNovo(statusServico)) {
+    throw new ErroDeRegra(
+      `Esta OS está como "${ROTULO_SERVICO[statusServico]}" e não aceita pagamento. ` +
+        "Se foi engano, corrija a etapa primeiro.",
+    );
+  }
+}
 /** O que a tela precisa saber depois da mudança. */
 export type PagamentoAlterado = {
   numero: number;
@@ -49,9 +58,10 @@ export async function registrarSinal(
     // 1) Situação atual da OS
     const ordem = await tx.ordemServico.findUnique({
       where: { id: ordemServicoId },
-      select: { numero: true, statusPagamento: true, valorOrcamento: true },
+      select: { numero: true, statusPagamento: true, valorOrcamento: true, statusServico: true },
     });
     if (!ordem) throw new ErroDeRegra("Ordem de serviço não encontrada.");
+    exigirServicoQueAceitaPagamento(ordem.statusServico);
 
     const statusAnterior = ordem.statusPagamento;
 
@@ -81,7 +91,12 @@ export async function registrarSinal(
 
     // 4) Grava só se a situação ainda for a que lemos (concorrência).
     const { count } = await tx.ordemServico.updateMany({
-      where: { id: ordemServicoId, statusPagamento: statusAnterior },
+      where: {
+        id: ordemServicoId,
+        statusPagamento: statusAnterior,
+        // Se a OS for cancelada em outro aparelho nesse meio-tempo, não grava.
+        statusServico: { notIn: [...SERVICO_SEM_PAGAMENTO_NOVO] },
+      },
       data: {
         statusPagamento: "SINAL_PAGO",
         valorSinal: sinal,
@@ -126,9 +141,10 @@ export async function registrarPagamento(
   return prisma.$transaction(async (tx) => {
     const ordem = await tx.ordemServico.findUnique({
       where: { id: ordemServicoId },
-      select: { numero: true, statusPagamento: true },
+      select: { numero: true, statusPagamento: true, statusServico: true },
     });
     if (!ordem) throw new ErroDeRegra("Ordem de serviço não encontrada.");
+    exigirServicoQueAceitaPagamento(ordem.statusServico);
 
     const statusAnterior = ordem.statusPagamento;
     if (!podeMudarPagamento(statusAnterior, "PAGO")) {
@@ -136,7 +152,11 @@ export async function registrarPagamento(
     }
 
     const { count } = await tx.ordemServico.updateMany({
-      where: { id: ordemServicoId, statusPagamento: statusAnterior },
+      where: {
+        id: ordemServicoId,
+        statusPagamento: statusAnterior,
+        statusServico: { notIn: [...SERVICO_SEM_PAGAMENTO_NOVO] },
+      },
       data: { statusPagamento: "PAGO" },
     });
     if (count === 0) {
