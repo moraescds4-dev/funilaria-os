@@ -4,6 +4,7 @@ import { ETAPAS_DO_QUADRO, ROTULO_PAGAMENTO, ROTULO_SERVICO } from "@/lib/fluxo-
 import { exigirSessao } from "@/lib/sessao";
 import { listarQuadro, type CartaoOS } from "@/server/quadro";
 import { AcoesDaOrdem } from "./acoes-da-ordem";
+import { CampoBusca } from "./listas";
 
 export const dynamic = "force-dynamic";
 
@@ -87,15 +88,25 @@ export default async function Inicio(props: PageProps<"/">) {
         </p>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-gray-900">Ordens de serviço</h1>
-        <Link
-          href="/ordens/nova"
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Nova OS
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href="/arquivo"
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
+          >
+            Arquivo
+          </Link>
+          <Link
+            href="/ordens/nova"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Nova OS
+          </Link>
+        </div>
       </div>
+
+      <CampoBusca />
 
       {/* Filtros por etapa (wireframe 4). Rolam para o lado no celular. */}
       <nav aria-label="Filtrar por etapa" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

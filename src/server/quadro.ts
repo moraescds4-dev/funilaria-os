@@ -17,7 +17,7 @@ import { ETAPAS_DO_QUADRO } from "@/lib/fluxo-status";
  * Por quantos dias uma OS ENTREGUE e PAGA continua no quadro.
  * Entregue e não paga fica até ser paga: é dinheiro a receber.
  */
-const DIAS_ENTREGUE_NO_QUADRO = 7;
+export const DIAS_ENTREGUE_NO_QUADRO = 7;
 
 function limiteEntregues(agora: Date): Date {
   return new Date(agora.getTime() - DIAS_ENTREGUE_NO_QUADRO * 24 * 60 * 60 * 1000);
