@@ -4,6 +4,7 @@ import { ROTULO_PAGAMENTO, ROTULO_SERVICO } from "@/lib/fluxo-status";
 import { emReais, formatarData, formatarDataHora, formatarTelefone } from "@/lib/formatacao";
 import { exigirSessao } from "@/lib/sessao";
 import { obterDetalheOrdem, type EventoLinhaDoTempo } from "@/server/detalhe-ordem";
+import { AcoesDaOrdem } from "../../acoes-da-ordem";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,20 @@ export default async function PaginaDetalheOrdem(props: PageProps<"/ordens/[nume
           </span>
         </div>
       </div>
+
+      {/* ── Ações: as mesmas do quadro ── */}
+      <Bloco titulo="Ações">
+        <AcoesDaOrdem
+          os={{
+            id: os.id,
+            placa: os.veiculo.placa,
+            statusServico: os.statusServico,
+            statusPagamento: os.statusPagamento,
+            valorOrcamento: os.valorOrcamento,
+            valorSinal: os.valorSinal,
+          }}
+        />
+      </Bloco>
 
       {/* ── Pessoas ── */}
       <Bloco titulo="Proprietário">

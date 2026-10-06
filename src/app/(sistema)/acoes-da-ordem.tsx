@@ -13,6 +13,15 @@ import {
   type EstadoAcao,
 } from "./ordens/actions";
 
+/**
+ * Só o que as ações usam. O quadro passa o cartão inteiro; a tela de
+ * detalhe monta este objeto a partir dos dados dela.
+ */
+export type DadosAcoes = Pick<
+  CartaoOS,
+  "id" | "placa" | "statusServico" | "statusPagamento" | "valorOrcamento" | "valorSinal"
+>;
+
 const estadoInicial: EstadoAcao = { sucesso: null, erro: null, erros: {} };
 
 type Acao = (estado: EstadoAcao, formData: FormData) => Promise<EstadoAcao>;
@@ -106,7 +115,7 @@ function BotaoAcao({
 }
 
 /** Botão que abre o formulário do sinal. Pede o orçamento se a OS não tiver (decisão B). */
-function FormularioSinal({ os }: { os: CartaoOS }) {
+function FormularioSinal({ os }: { os: DadosAcoes }) {
   const [aberto, setAberto] = useState(false);
   const [estado, executar, enviando] = useActionState(registrarSinalAction, estadoInicial);
   const e = estado.erros;
@@ -185,7 +194,7 @@ function FormularioSinal({ os }: { os: CartaoOS }) {
 }
 
 /** Todas as ações de uma OS no quadro. */
-export function AcoesDaOrdem({ os }: { os: CartaoOS }) {
+export function AcoesDaOrdem({ os }: { os: DadosAcoes }) {
   const proxima = proximaEtapa(os.statusServico);
 
   // Encerrar a OS: recusar (só no orçamento) ou cancelar (aprovado ou em execução).
