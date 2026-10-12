@@ -10,7 +10,7 @@ import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { novaOrdemServicoSchema } from "../src/lib/validacoes/ordem-servico";
 import { criarOrdemServico } from "../src/server/ordens-servico";
-import { mudarStatusServico } from "../src/server/status-servico";
+import { corrigirStatusServico, mudarStatusServico } from "../src/server/status-servico";
 import { corrigirPagamento, registrarPagamento, registrarSinal } from "../src/server/pagamento";
 import { ErroDeRegra } from "../src/server/erros";
 
@@ -215,6 +215,39 @@ async function main() {
     erroDe(() => corrigirPagamento("nao-existe", u)),
   ]);
   conferir("sinal, pagamento e correção recusam uma OS que não existe", erros.every((e) => e !== null));
+
+  // 9) OS recusada ou cancelada não aceita pagamento novo (06/10/2026)
+  const os3 = await novaOS(u, "1.000,00");
+  console.log(`\n9) OS cancelada e OS recusada → OS nº ${os3.numero}`);
+  await registrarSinal(os3.id, "200.00", u);
+  await mudarStatusServico(os3.id, "APROVADO", u);
+  await mudarStatusServico(os3.id, "CANCELADO", u);
+  conferir(
+    "cancelada com sinal: quitação é recusada",
+    (await erroDe(() => registrarPagamento(os3.id, u))) !== null &&
+      (await estadoDe(os3.id)).statusPagamento === "SINAL_PAGO",
+  );
+  const c9 = await corrigirPagamento(os3.id, u);
+  conferir("mas corrigir o pagamento continua permitido", c9.statusNovo === "NAO_PAGO");
+  conferir(
+    "e, depois disso, um sinal novo também é recusado",
+    (await erroDe(() => registrarSinal(os3.id, "200.00", u))) !== null,
+  );
+
+  const os4 = await novaOS(u, "500,00");
+  await mudarStatusServico(os4.id, "RECUSADO", u);
+  conferir(
+    "recusada: sinal e pagamento integral são recusados",
+    (await erroDe(() => registrarSinal(os4.id, "100.00", u))) !== null &&
+      (await erroDe(() => registrarPagamento(os4.id, u))) !== null,
+  );
+  conferir("nada foi gravado na OS recusada", (await historicoDe(os4.id)).length === 0);
+  await corrigirStatusServico(os4.id, u); // desfaz a recusa: volta para ORCAMENTO
+  await registrarPagamento(os4.id, u);
+  conferir(
+    "depois de corrigir a etapa, o pagamento volta a ser aceito",
+    (await estadoDe(os4.id)).statusPagamento === "PAGO",
+  );
 }
 
 main()

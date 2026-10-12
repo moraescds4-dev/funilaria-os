@@ -2,7 +2,8 @@
 
 import { startTransition, useActionState, useState } from "react";
 import type { StatusServico } from "@/generated/prisma/enums";
-import { proximaEtapa, ROTULO_SERVICO } from "@/lib/fluxo-status";
+import { aceitaPagamentoNovo, proximaEtapa, ROTULO_SERVICO } from "@/lib/fluxo-status";
+import { emReais } from "@/lib/formatacao";
 import type { CartaoOS } from "@/server/quadro";
 import {
   corrigirPagamentoAction,
@@ -12,6 +13,15 @@ import {
   registrarSinalAction,
   type EstadoAcao,
 } from "./ordens/actions";
+
+/**
+ * Só o que as ações usam. O quadro passa o cartão inteiro; a tela de
+ * detalhe monta este objeto a partir dos dados dela.
+ */
+export type DadosAcoes = Pick<
+  CartaoOS,
+  "id" | "placa" | "statusServico" | "statusPagamento" | "valorOrcamento" | "valorSinal"
+>;
 
 const estadoInicial: EstadoAcao = { sucesso: null, erro: null, erros: {} };
 
@@ -23,13 +33,6 @@ const classeBotaoSecundario =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 disabled:opacity-60";
 const classeCampo =
   "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-gray-900 focus:outline-none";
-
-/** "1850.00" → "R$ 1.850,00". Só para exibir. */
-function emReais(texto: string): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    Number(texto),
-  );
-}
 
 /** Saldo em centavos inteiros: "1850.00" − "600.00" → "1250.00", sem arredondamento. */
 function saldo(orcamento: string, sinal: string): string {
@@ -106,7 +109,7 @@ function BotaoAcao({
 }
 
 /** Botão que abre o formulário do sinal. Pede o orçamento se a OS não tiver (decisão B). */
-function FormularioSinal({ os }: { os: CartaoOS }) {
+function FormularioSinal({ os }: { os: DadosAcoes }) {
   const [aberto, setAberto] = useState(false);
   const [estado, executar, enviando] = useActionState(registrarSinalAction, estadoInicial);
   const e = estado.erros;
@@ -185,8 +188,11 @@ function FormularioSinal({ os }: { os: CartaoOS }) {
 }
 
 /** Todas as ações de uma OS no quadro. */
-export function AcoesDaOrdem({ os }: { os: CartaoOS }) {
+export function AcoesDaOrdem({ os }: { os: DadosAcoes }) {
   const proxima = proximaEtapa(os.statusServico);
+
+    // OS recusada ou cancelada: só correções, nada de pagamento novo (06/10).
+  const podePagar = aceitaPagamentoNovo(os.statusServico);
 
   // Encerrar a OS: recusar (só no orçamento) ou cancelar (aprovado ou em execução).
   const encerrar: { status: StatusServico; rotulo: string } | null =
@@ -232,7 +238,7 @@ export function AcoesDaOrdem({ os }: { os: CartaoOS }) {
           )}
 
           {/* ── Pagamento ── */}
-          {os.statusPagamento === "NAO_PAGO" && (
+          {podePagar && os.statusPagamento === "NAO_PAGO" && (
             <>
               <FormularioSinal os={os} />
               <BotaoAcao
@@ -245,7 +251,7 @@ export function AcoesDaOrdem({ os }: { os: CartaoOS }) {
               />
             </>
           )}
-          {os.statusPagamento === "SINAL_PAGO" && (
+          {podePagar && os.statusPagamento === "SINAL_PAGO" && (
             <BotaoAcao
               acao={registrarPagamentoAction}
               ordemServicoId={os.id}

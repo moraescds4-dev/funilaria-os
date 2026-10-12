@@ -4,6 +4,7 @@ import { ETAPAS_DO_QUADRO, ROTULO_PAGAMENTO, ROTULO_SERVICO } from "@/lib/fluxo-
 import { exigirSessao } from "@/lib/sessao";
 import { listarQuadro, type CartaoOS } from "@/server/quadro";
 import { AcoesDaOrdem } from "./acoes-da-ordem";
+import { CampoBusca } from "./listas";
 
 export const dynamic = "force-dynamic";
 
@@ -18,32 +19,39 @@ function Cartao({ os }: { os: CartaoOS }) {
   // Entregue e não paga: dinheiro a receber, destacado.
   const aReceber = os.statusServico === "ENTREGUE" && os.statusPagamento !== "PAGO";
 
-  return (
+    return (
     <article className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span className="text-lg font-bold tracking-wider text-gray-900">{os.placa}</span>
-          <span className="text-sm text-gray-700">
-            {os.modelo}
-            {os.cor ? ` · ${os.cor}` : ""}
-          </span>
-          <span className="text-sm text-gray-500">{os.cliente}</span>
+      {/* Dados e etiquetas levam ao detalhe. Os botões ficam fora do link:
+          o HTML não permite botão dentro de link. */}
+      <Link
+        href={`/ordens/${os.numero}`}
+        className="-m-2 flex flex-col gap-3 rounded-lg p-2 hover:bg-gray-50"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col">
+            <span className="text-lg font-bold tracking-wider text-gray-900">{os.placa}</span>
+            <span className="text-sm text-gray-700">
+              {os.modelo}
+              {os.cor ? ` · ${os.cor}` : ""}
+            </span>
+            <span className="text-sm text-gray-500">{os.cliente}</span>
+          </div>
+          <span className="shrink-0 text-xs text-gray-500">OS nº {os.numero} ›</span>
         </div>
-        <span className="shrink-0 text-xs text-gray-500">OS nº {os.numero}</span>
-      </div>
 
-      <div className="flex flex-wrap gap-2">
-        <span
-          className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${COR_PAGAMENTO[os.statusPagamento]}`}
-        >
-          {ROTULO_PAGAMENTO[os.statusPagamento]}
-        </span>
-        {aReceber && (
-          <span className="rounded-full border border-red-300 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
-            A receber
+        <div className="flex flex-wrap gap-2">
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${COR_PAGAMENTO[os.statusPagamento]}`}
+          >
+            {ROTULO_PAGAMENTO[os.statusPagamento]}
           </span>
-        )}
-      </div>
+          {aReceber && (
+            <span className="rounded-full border border-red-300 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+              A receber
+            </span>
+          )}
+        </div>
+      </Link>
 
       <AcoesDaOrdem os={os} />
     </article>
@@ -80,15 +88,25 @@ export default async function Inicio(props: PageProps<"/">) {
         </p>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold text-gray-900">Ordens de serviço</h1>
-        <Link
-          href="/ordens/nova"
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
-        >
-          Nova OS
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href="/arquivo"
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800"
+          >
+            Arquivo
+          </Link>
+          <Link
+            href="/ordens/nova"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Nova OS
+          </Link>
+        </div>
       </div>
+
+      <CampoBusca />
 
       {/* Filtros por etapa (wireframe 4). Rolam para o lado no celular. */}
       <nav aria-label="Filtrar por etapa" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
