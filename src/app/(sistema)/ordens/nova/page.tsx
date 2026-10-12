@@ -1,19 +1,12 @@
 import Form from "next/form";
 import Link from "next/link";
+import { formatarTelefone } from "@/lib/formatacao";
 import { exigirSessao } from "@/lib/sessao";
 import { normalizarPlaca, PADRAO_PLACA } from "@/lib/validacoes/ordem-servico";
 import { buscarVeiculoPorPlaca } from "@/server/veiculos";
 import { FormularioNovaOrdem } from "./formulario-nova-ordem";
 
 export const dynamic = "force-dynamic";
-
-/** "11987654321" → "(11) 98765-4321" */
-function formatarTelefone(digitos: string): string {
-  const ddd = digitos.slice(0, 2);
-  const numero = digitos.slice(2);
-  const corte = numero.length === 9 ? 5 : 4;
-  return `(${ddd}) ${numero.slice(0, corte)}-${numero.slice(corte)}`;
-}
 
 export default async function PaginaNovaOrdem(props: PageProps<"/ordens/nova">) {
   await exigirSessao();

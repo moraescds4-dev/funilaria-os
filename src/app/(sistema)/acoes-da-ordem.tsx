@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useState } from "react";
 import type { StatusServico } from "@/generated/prisma/enums";
 import { aceitaPagamentoNovo, proximaEtapa, ROTULO_SERVICO } from "@/lib/fluxo-status";
+import { emReais } from "@/lib/formatacao";
 import type { CartaoOS } from "@/server/quadro";
 import {
   corrigirPagamentoAction,
@@ -32,13 +33,6 @@ const classeBotaoSecundario =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 disabled:opacity-60";
 const classeCampo =
   "w-full rounded-lg border border-gray-300 px-3 py-2.5 text-base focus:border-gray-900 focus:outline-none";
-
-/** "1850.00" → "R$ 1.850,00". Só para exibir. */
-function emReais(texto: string): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    Number(texto),
-  );
-}
 
 /** Saldo em centavos inteiros: "1850.00" − "600.00" → "1250.00", sem arredondamento. */
 function saldo(orcamento: string, sinal: string): string {

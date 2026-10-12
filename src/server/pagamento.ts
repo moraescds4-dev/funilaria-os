@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import type { StatusPagamento, StatusServico } from "@/generated/prisma/enums";
 import { aceitaPagamentoNovo, podeMudarPagamento, ROTULO_PAGAMENTO, ROTULO_SERVICO, SERVICO_SEM_PAGAMENTO_NOVO, } from "@/lib/fluxo-status";
+import { emReais } from "@/lib/formatacao";
 import { ErroDeRegra } from "@/server/erros";
 
 /*
@@ -16,7 +17,7 @@ import { ErroDeRegra } from "@/server/erros";
  * para as contas: nunca passam por number, para não perder centavos.
  *
  * Quem chama é responsável por exigir a sessão (exigirSessao).
-/
+ */
 
 /** Exceção de 06/10: OS recusada ou cancelada não recebe pagamento novo. */
 function exigirServicoQueAceitaPagamento(statusServico: StatusServico) {
@@ -33,13 +34,6 @@ export type PagamentoAlterado = {
   statusAnterior: StatusPagamento;
   statusNovo: StatusPagamento;
 };
-
-/** Decimal → "R$ 1.850,00". Só para exibir na mensagem, nunca para contas. */
-function emReais(valor: Prisma.Decimal): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    valor.toNumber(),
-  );
-}
 
 /**
  * Registra o sinal pago pelo cliente (NAO_PAGO → SINAL_PAGO).
@@ -86,7 +80,7 @@ export async function registrarSinal(
       throw new ErroDeRegra("O sinal deve ser maior que zero.");
     }
     if (sinal.gt(orcamento)) {
-      throw new ErroDeRegra(`O sinal não pode passar do orçamento (${emReais(orcamento)}).`);
+      throw new ErroDeRegra(`O sinal não pode passar do orçamento (${emReais(orcamento.toFixed(2))}).`);
     }
 
     // 4) Grava só se a situação ainda for a que lemos (concorrência).
